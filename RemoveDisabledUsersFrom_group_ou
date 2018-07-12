@@ -1,0 +1,18 @@
+#This script will query through all distribution and security groups and remove INACTIVE users
+
+Import-Module ActiveDirectory
+
+#Define the OU for the the query **Test**
+$searchOU = (OU=Users,OU=DNV,OU=FCUSA,DC=fcusa,DC=local)
+
+#Grabs objects from Built-In defined Security and Distribution groups
+Get-ADGroup -Filter 'GroupCategory -eq "Security" -or GroupCategory -eq "Distribution"' -SearchBase $searchOU | ForEach-Object{ $group = $_
+	Get-ADGroupMember -Identity $group -Recursive | %{Get-ADUser -Identity $_.distinguishedName -Properties Enabled | ?{$_.Enabled -eq $false}} | ForEach-Object{ $user = $_
+		$uname = $user.Name
+		$gname = $group.Name
+		Write-Host "Removing $uname from $gname" -Foreground Yellow
+		Remove-ADGroupMember -Identity $group -Member $user -Confirm:$false
+}
+
+#Remove Disabled user from the Specified OU
+Search-ADAccount -SearchBase $searchOU  -AccountDisabled | Move-AdObject -WhatIf -Confirm:$false
